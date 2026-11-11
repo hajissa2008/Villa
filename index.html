@@ -1,0 +1,22 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Villa platform</title>
+<style>html,body{height:100%;margin:0}body{display:grid;place-items:center;background:#ece6dc;font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;color:#2a2622}
+form{width:min(340px,calc(100vw - 32px));background:#fff;border-radius:16px;padding:28px 26px;box-shadow:0 12px 40px rgba(60,40,20,.14);box-sizing:border-box}
+h1{font-size:19px;margin:0 0 4px}p{margin:0 0 18px;color:#6f665c;font-size:13px}label{display:block;font-size:12px;font-weight:600;margin:12px 0 5px;color:#514a42}
+input{width:100%;box-sizing:border-box;padding:11px 12px;border:1px solid #d6cdc0;border-radius:10px;font:inherit;background:#faf8f5}input:focus{outline:2px solid #b4532a;outline-offset:1px}
+button{width:100%;margin-top:20px;padding:12px;border:0;border-radius:10px;background:#b4532a;color:#fff;font:600 15px system-ui,sans-serif;cursor:pointer}button:disabled{opacity:.6;cursor:wait}
+#m{min-height:20px;margin-top:12px;font-size:13px;color:#a3321c;text-align:center}</style></head><body>
+<form id="f" autocomplete="on"><h1>Villa platform</h1><p>Private 3D model. Sign in to open it.</p>
+<label for="u">Username</label><input id="u" name="username" autocomplete="username" required autofocus>
+<label for="p">Password</label><input id="p" name="password" type="password" autocomplete="current-password" required>
+<button id="b">Open</button><div id="m" role="alert"></div></form>
+<script>
+const $ = id => document.getElementById(id), ITER = 600000;
+$('f').addEventListener('submit', async e => { e.preventDefault(); const b = $('b'), m = $('m'); b.disabled = true; m.style.color = '#6f665c'; m.textContent = 'Opening…';
+  try { if (!window.crypto || !crypto.subtle || !window.DecompressionStream) throw new Error('browser');
+    const buf = new Uint8Array(await (await fetch('villa.bin', { cache: 'no-cache' })).arrayBuffer()), salt = buf.slice(0, 16), iv = buf.slice(16, 28), data = buf.slice(28);
+    const base = await crypto.subtle.importKey('raw', new TextEncoder().encode($('u').value.trim().toLowerCase() + '\n' + $('p').value), 'PBKDF2', false, ['deriveKey']);
+    const key = await crypto.subtle.deriveKey({ name: 'PBKDF2', salt, iterations: ITER, hash: 'SHA-256' }, base, { name: 'AES-GCM', length: 256 }, false, ['decrypt']);
+    let plain; try { plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, data); } catch { throw new Error('wrong'); }
+    const html = await new Response(new Blob([plain]).stream().pipeThrough(new DecompressionStream('gzip'))).text(); document.open(); document.write(html); document.close(); }
+  catch (err) { b.disabled = false; m.style.color = '#a3321c'; m.textContent = err.message === 'wrong' ? 'Wrong username or password.' : err.message === 'browser' ? 'This browser is too old. Use a current Chrome, Edge, Safari or Firefox.' : 'Could not load the model. Check your connection and try again.'; } });
+</script></body></html>
